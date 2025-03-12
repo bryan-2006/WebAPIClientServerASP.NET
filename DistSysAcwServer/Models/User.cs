@@ -15,6 +15,15 @@ namespace DistSysAcwServer.Models
         // TODO: Create a User Class for use with Entity Framework
         // Note that you can use the [key] attribute to set your ApiKey Guid as the primary key 
         #endregion
+        [Key]
+        public required string ApiKey { get; set; } = Guid.NewGuid().ToString();
+
+        [Required]
+        public required string UserName { get; set; }
+
+        [Required]
+        public required string Role { get; set; }
+        public User() { }
     }
 
     #region Task13?

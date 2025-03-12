@@ -20,12 +20,12 @@ namespace DistSysAcwServer.Controllers
 
         #region TASK1
         //    TODO: add api/talkback/hello response
+
+        // GET: api/talkback/hello
         [HttpGet]
         public IActionResult Hello()
         {
-            Error.StatusCode = 501;
-            Error.Message = "Not Implemented";
-            return new EmptyResult();
+            return Ok("Hello World");
         }
         #endregion
 
@@ -35,6 +35,28 @@ namespace DistSysAcwServer.Controllers
         //       sort the integers into ascending order
         //       send the integers back as the api/talkback/sort response
         //       conform to the error handling requirements in the spec
+        [HttpGet]
+        public IActionResult Sort([FromQuery] string[] integers)
+        {
+            if (integers == null || integers.Length == 0)
+            {
+                return Ok(new int[] { }); // empty array 
+            }
+
+            List<int> parsedIntegers = new List<int>();
+
+            foreach (var value in integers)
+            {
+                if (!int.TryParse(value, out int number)) // valid integer
+                {
+                    return BadRequest("Bad request"); // "Bad request"
+                }
+                parsedIntegers.Add(number);
+            }
+
+            parsedIntegers.Sort();
+            return Ok(parsedIntegers);
+        }
         #endregion
     }
 }
