@@ -1,3 +1,4 @@
+using DistSysAcwServer.Controllers;
 using DistSysAcwServer.Middleware;
 using DistSysAcwServer.Pipeline;
 using DistSysAcwServer.Shared;
@@ -27,6 +28,10 @@ builder.Services.AddAuthentication(options =>
     ("CustomAuthentication", options => { });
 
 builder.Services.AddTransient<IAuthorizationHandler, DistSysAcwServer.Auth.CustomAuthorizationHandlerMiddleware>();
+builder.Services.AddScoped<UserDatabaseAccess>();
+builder.Services.AddAuthentication(options =>{options.DefaultScheme = "CustomAuthentication";}).
+    AddScheme<AuthenticationSchemeOptions, DistSysAcwServer.Auth.CustomAuthenticationHandlerMiddleware>
+    ("CustomAuthentication", options => { });
 
 var app = builder.Build();
 

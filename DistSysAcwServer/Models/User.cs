@@ -16,7 +16,7 @@ namespace DistSysAcwServer.Models
         // Note that you can use the [key] attribute to set your ApiKey Guid as the primary key 
         #endregion
         [Key]
-        public required string ApiKey { get; set; } = Guid.NewGuid().ToString();
+        public required string ApiKey { get; set; }
 
         [Required]
         public required string UserName { get; set; }
