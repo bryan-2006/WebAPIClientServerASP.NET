@@ -59,9 +59,9 @@ namespace DistSysAcwServer.Auth
                 return AuthenticateResult.Fail("Unauthorized. Check ApiKey in Header is correct.");
             }
 
-            #pragma warning disable CS8604 // Possible null reference argument.
+           
             var user = await _userDataAccess.GetUserWithAPI(apiKey);
-            #pragma warning restore CS8604 // Possible null reference argument.
+           
 
             if (user == null)
             {
@@ -81,11 +81,23 @@ namespace DistSysAcwServer.Auth
             return AuthenticateResult.Success(ticket);
         }
 
+        //protected override Task HandleChallengeAsync(AuthenticationProperties properties)
+        //{
+        //    Response.StatusCode = 401; // Unauthorized
+        //    Response.ContentType = "application/json";
+        //    return Response.WriteAsync("\"Unauthorized. Check ApiKey in Header is correct.\"");
+        //}
+
         protected override Task HandleChallengeAsync(AuthenticationProperties properties)
         {
-            Response.StatusCode = 401; // Unauthorized
-            Response.ContentType = "application/json";
-            return Response.WriteAsync("\"Unauthorized. Check ApiKey in Header is correct.\"");
+            if (!Response.HasStarted)
+            {   Response.StatusCode = 401; // Unauthorized
+                Response.ContentType = "application/json";
+
+                return Response.WriteAsync("\"Unauthorized. Check ApiKey in Header is correct.\"");
+            }
+
+            return Task.CompletedTask;
         }
     }
 }

@@ -29,9 +29,6 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddTransient<IAuthorizationHandler, DistSysAcwServer.Auth.CustomAuthorizationHandlerMiddleware>();
 builder.Services.AddScoped<UserDatabaseAccess>();
-builder.Services.AddAuthentication(options =>{options.DefaultScheme = "CustomAuthentication";}).
-    AddScheme<AuthenticationSchemeOptions, DistSysAcwServer.Auth.CustomAuthenticationHandlerMiddleware>
-    ("CustomAuthentication", options => { });
 
 var app = builder.Build();
 
