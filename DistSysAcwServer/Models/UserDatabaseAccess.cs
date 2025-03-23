@@ -68,5 +68,23 @@ namespace DistSysAcwServer.Controllers
         {
             return await _userContext.Users.AnyAsync(u => u.UserName == userName);
         }
+
+        public async Task<User?> GetUserByName(string username)
+        {
+            return await _userContext.Users.FirstOrDefaultAsync(u => u.UserName == username);
+        }
+
+        public async Task<bool> UpdateUserRole(string username, string newRole)
+        {
+            
+            var user = await GetUserByName(username);
+            if (user == null) return false;
+
+            user.Role = newRole;
+            await _userContext.SaveChangesAsync();
+            return true;
+        }
+
+
     }
 }
