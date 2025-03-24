@@ -19,7 +19,7 @@ namespace DistSysAcwServer.Controllers
 
 
         #region TASK1
-        //    TODO: add api/talkback/hello response
+        //    added api/talkback/hello response
 
         // GET: api/talkback/hello
         [HttpGet]
