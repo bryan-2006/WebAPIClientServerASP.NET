@@ -94,7 +94,7 @@ namespace DistSysAcwServer.Auth
             {   Response.StatusCode = 401; // Unauthorized
                 Response.ContentType = "application/json";
 
-                return Response.WriteAsync("\"Unauthorized. Check ApiKey in Header is correct.\"");
+                return Response.WriteAsync("Unauthorized. Check ApiKey in Header is correct.");
             }
 
             return Task.CompletedTask;

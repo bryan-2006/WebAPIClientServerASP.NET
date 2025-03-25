@@ -60,7 +60,7 @@ namespace DistSysAcwServer.Auth
                 {
                     httpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
                     httpContext.Response.ContentType = "application/json";
-                    return httpContext.Response.WriteAsync("\"Forbidden. Admin access only.\"");
+                    return httpContext.Response.WriteAsync("Forbidden. Admin access only.");
                 }
             }
 
