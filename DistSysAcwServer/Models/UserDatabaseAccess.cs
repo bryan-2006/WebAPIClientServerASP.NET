@@ -36,7 +36,9 @@ namespace DistSysAcwServer.Controllers
 
         public async Task<bool> UserExistenceWithNameAndAPI(string userName, string apiKey)
         {
-            return await _userContext.Users.AnyAsync(u => u.UserName == userName && u.ApiKey == apiKey);
+            return await _userContext.Users
+                .Where(u => EF.Functions.Collate(u.UserName, "Latin1_General_BIN") == userName && u.ApiKey == apiKey)
+                .AnyAsync();
         }
 
         public async Task<User?> GetUserWithAPI(string apiKey)
@@ -46,12 +48,11 @@ namespace DistSysAcwServer.Controllers
 
         public async Task<bool> DeleteUserWithAPI(string apiKey)
         {
-            var user = await GetUserWithAPI(apiKey);
+            var user = await _userContext.Users
+                .Where(u => EF.Functions.Collate(u.ApiKey, "Latin1_General_BIN") == apiKey)
+                .FirstOrDefaultAsync();
 
-            if (user == null)
-            {
-                return false;
-            }
+            if (user == null) return false;
 
             _userContext.Users.Remove(user);
             await _userContext.SaveChangesAsync();
@@ -66,12 +67,15 @@ namespace DistSysAcwServer.Controllers
 
         public async Task<bool> UserExistenceWithName(string userName)
         {
-            return await _userContext.Users.AnyAsync(u => u.UserName == userName);
+            return await _userContext.Users
+                .Where(u => EF.Functions.Collate(u.UserName, "Latin1_General_BIN") == userName).AnyAsync();
         }
 
         public async Task<User?> GetUserByName(string username)
         {
-            return await _userContext.Users.FirstOrDefaultAsync(u => u.UserName == username);
+            return await _userContext.Users
+                .Where(u => EF.Functions.Collate(u.UserName, "Latin1_General_BIN") == username)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<bool> UpdateUserRole(string username, string newRole)

@@ -11,10 +11,14 @@ namespace DistSysAcwServer.Controllers
     public class ProtectedController : ControllerBase
     {
         private readonly UserDatabaseAccess _userDataAccess;
+        private CspParameters cspParams;
 
         public ProtectedController(UserDatabaseAccess userDataAccess)
         {
             _userDataAccess = userDataAccess;
+
+            cspParams = new CspParameters(); // CryptoServiceProvider Parameters
+            cspParams.Flags = CspProviderFlags.UseMachineKeyStore; // Windows only
         }
 
         [HttpGet("hello")]
@@ -84,6 +88,32 @@ namespace DistSysAcwServer.Controllers
             string sha256Hex = BitConverter.ToString(sha256ByteMessage).Replace("-", "").ToUpper();
 
             return Ok(sha256Hex);
+        }
+
+
+        [HttpGet("getpublickey")]
+        public IActionResult GetPublicKey()
+        {
+            if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
+            {
+                return Unauthorized();
+            }
+
+            CspParameters cspParams = new CspParameters(); // CryptoServiceProvider Parameters
+            cspParams.Flags = CspProviderFlags.UseMachineKeyStore; // Windows only
+
+            using (RSA rsaProvider = new RSACryptoServiceProvider(cspParams))
+            {
+                // Generate a new RSA key pair
+                string publicKey = rsaProvider.ToXmlString(false);
+
+                return Ok(publicKey);
+
+                // Export the private key
+                //string privateKey = rsa.ToXmlString(true);
+                //Console.WriteLine("Private Key: " + privateKey);
+            }
+
         }
     }
 }

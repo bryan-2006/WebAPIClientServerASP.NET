@@ -7,10 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace DistSysAcwServer.Controllers
 {
+    [Route("api/[controller]")]
+    [ApiController]
     public class TalkbackController : BaseController
     {
-
-
         /// <summary>
         /// Constructs a TalkBack controller, taking the UserContext through dependency injection
         /// </summary>
@@ -22,7 +22,7 @@ namespace DistSysAcwServer.Controllers
         //    added api/talkback/hello response
 
         // GET: api/talkback/hello
-        [HttpGet]
+        [HttpGet("hello")]
         public IActionResult Hello()
         {
             return Ok("Hello World");
@@ -35,7 +35,7 @@ namespace DistSysAcwServer.Controllers
         //       sort the integers into ascending order
         //       send the integers back as the api/talkback/sort response
         //       conform to the error handling requirements in the spec
-        [HttpGet]
+        [HttpGet("sort")]
         public IActionResult Sort([FromQuery] string[] integers)
         {
             if (integers == null || integers.Length == 0)
@@ -49,7 +49,7 @@ namespace DistSysAcwServer.Controllers
             {
                 if (!int.TryParse(value, out int number)) // valid integer
                 {
-                    return BadRequest("Bad request"); // "Bad request"
+                    return BadRequest("Bad Request"); // "Bad request"
                 }
                 parsedIntegers.Add(number);
             }

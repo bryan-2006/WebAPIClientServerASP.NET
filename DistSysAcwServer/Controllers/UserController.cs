@@ -19,11 +19,16 @@ namespace DistSysAcwServer.Controllers
         }
 
         [HttpGet("new")]
-        public async Task<IActionResult> CheckUserExistence([FromQuery] string username)
+        public async Task<IActionResult> CheckUserExistence()
         {
+            var username = HttpContext.Request.Query["username"];
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return Ok("\"False - User Does Not Exist! Did you mean to do a POST to create a new user?\"");
+            }
             bool exists = await _userDataAccess.UserExistenceWithName(username);
-            return Ok(exists ? "True - User Does Exist! Did you mean to do a POST to create a new user?" :
-                "False - User Does Not Exist! Did you mean to do a POST to create a new user?");
+            return Ok(exists ? "\"True - User Does Exist! Did you mean to do a POST to create a new user?\"" :
+                "\"False - User Does Not Exist! Did you mean to do a POST to create a new user?\"");
         }
 
         // since IIS Express use localhost:53415 for curl commands
@@ -34,7 +39,7 @@ namespace DistSysAcwServer.Controllers
         {
             if (string.IsNullOrWhiteSpace(username))
             {
-                return BadRequest("Oops. Make sure your body contains a string with your username and your Content-Type is Content-Type:application/json");
+                return BadRequest("\"Oops. Make sure your body contains a string with your username and your Content-Type is Content-Type:application/json\"");
             }
 
             bool exists = await _userDataAccess.UserExistenceWithName(username);
