@@ -1,17 +1,10 @@
 ﻿using System;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static System.Net.WebRequestMethods;
+
 
 #region Task 10 and beyond
 
@@ -20,9 +13,10 @@ class Client
     private static readonly HttpClient client = new HttpClient();
     private static string apiKey = "";
     private static string username = "";
-    private static string publickey = "";
-    //private static string baseUrl = "http://150.237.94.9/2928359/Api";
+    private static string publicKey = "";
+    // private static string baseUrl = "http://150.237.94.9/2928359/Api";
     private static string baseUrl = "http://localhost:53415/api";
+    private static RSACryptoServiceProvider _clientRsaProvider = new RSACryptoServiceProvider();
 
     static async Task Main()
     {
@@ -112,12 +106,15 @@ class Client
                                 "Invalid action API endpoint for Protected Get method. " +
                                 "Can only be \"Get PublicKey\" (case sensitive).");
                             }
-                            break; // Add break statement here
+                            break;
+                        case "Sign":
+                            await ProtectedSign(arg);
+                            break;
                         default:
                             Console.WriteLine(
                                 "Invalid action API endpoint for Protected controller. " +
-                                "Can only be \"Hello\", \"SHA1\", \"SHA256\", or " +
-                                "\"Get PublicKey\" (case sensitive).");
+                                "Can only be \"Hello\", \"SHA1\", \"SHA256\", " +
+                                "\"Get PublicKey\" or \"Sign <message>\" (case sensitive).");
                             break;
                     }
                     break;
@@ -134,6 +131,56 @@ class Client
         }
     }
 
+    // Inside the Client class, replace the method ProtectedSign with the following:
+
+    private static async Task ProtectedSign(string arg)
+    {
+        try
+        {
+            if (apiKey == "")
+            {
+                Console.WriteLine("You need to do a User Post or User Set first");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(publicKey))
+            {
+                Console.WriteLine("Client doesn't yet have the public key");
+                return;
+            }
+            Console.WriteLine("...please wait..."); Console.WriteLine("");
+            var requestMessage = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri($"{baseUrl}/Protected/Sign?message={arg}"),
+            };
+
+            requestMessage.Headers.Add("ApiKey", apiKey);
+
+            var response = await client.SendAsync(requestMessage);
+            string hexWithDashes = await response.Content.ReadAsStringAsync();
+
+            string hexNoDashes = hexWithDashes.Replace("-", "");
+            byte[] signedBytes = Convert.FromHexString(hexNoDashes);
+
+            byte[] dataToCompare = Encoding.ASCII.GetBytes(arg);
+            bool verified = _clientRsaProvider.VerifyData(dataToCompare, SHA1.Create(), signedBytes);
+
+            if (verified)
+            {
+                Console.WriteLine("Message was successfully signed");
+            }
+            else
+            {
+                Console.WriteLine("Message was not successfully signed VERIFIED == FALSE");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Message was not successfully signed" + ex.Message);
+        }
+    }
+
     private static async Task ProtectedPublicKeyRetrieve()
     {
         if (apiKey == "")
@@ -141,7 +188,7 @@ class Client
             Console.WriteLine("You need to do a User Post or User Set first");
             return;
         }
-
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
         var requestMessage = new HttpRequestMessage
         {
             Method = HttpMethod.Get,
@@ -154,7 +201,9 @@ class Client
 
         if (response.IsSuccessStatusCode)
         {
-            publickey = await response.Content.ReadAsStringAsync();
+            publicKey = await response.Content.ReadAsStringAsync();
+
+            _clientRsaProvider.FromXmlString(publicKey);
             Console.WriteLine("Got Public Key");
         }
         else
@@ -170,7 +219,7 @@ class Client
             Console.WriteLine("You need to do a User Post or User Set first");
             return;
         }
-
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
         var requestMessage = new HttpRequestMessage
         {
             Method = HttpMethod.Get,
@@ -206,7 +255,7 @@ class Client
             Console.WriteLine("You need to do a User Post or User Set first");
             return;
         }
-
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
         var requestMessage = new HttpRequestMessage
         {
             Method = HttpMethod.Post,
@@ -230,7 +279,7 @@ class Client
             Console.WriteLine("You need to do a User Post or User Set first");
             return;
         }
-
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
         var deleteRequest = new HttpRequestMessage(
             HttpMethod.Delete, $"{baseUrl}/User/removeuser?username={username}");
         deleteRequest.Headers.Add("ApiKey", apiKey);
@@ -251,6 +300,7 @@ class Client
 
     private static void UserSet(string usernameInput, string apiInput)
     {
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
         username = usernameInput;
         apiKey = apiInput;
         Console.WriteLine("Stored");

@@ -2,23 +2,41 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace DistSysAcwServer.Controllers
 {
     [Authorize(Roles = "Admin, User")]
     [Route("api/[controller]")]
     [ApiController]
+
     public class ProtectedController : ControllerBase
     {
         private readonly UserDatabaseAccess _userDataAccess;
-        private CspParameters cspParams;
+        // private CspParameters cspParams;
+        private static RSACryptoServiceProvider _rsaProvider;
+        // Fixed the declaration of the ContainerName field to resolve all the specified errors.
+        private readonly string ContainerName = "ProtectedKeyContainer";
 
         public ProtectedController(UserDatabaseAccess userDataAccess)
         {
             _userDataAccess = userDataAccess;
 
-            cspParams = new CspParameters(); // CryptoServiceProvider Parameters
-            cspParams.Flags = CspProviderFlags.UseMachineKeyStore; // Windows only
+            CspParameters cspParameters = new CspParameters
+            {
+                KeyContainerName = ContainerName,
+                Flags = CspProviderFlags.UseMachineKeyStore
+            };
+
+            //cspParams = new CspParameters(); // CryptoServiceProvider Parameters
+            //cspParams.Flags = CspProviderFlags.UseMachineKeyStore; // Windows only
+
+            // _rsaProvider = new RSACryptoServiceProvider();
+
+            _rsaProvider = new RSACryptoServiceProvider(cspParameters)
+            {
+                PersistKeyInCsp = true
+            };
         }
 
         [HttpGet("hello")]
@@ -99,21 +117,38 @@ namespace DistSysAcwServer.Controllers
                 return Unauthorized();
             }
 
-            CspParameters cspParams = new CspParameters(); // CryptoServiceProvider Parameters
-            cspParams.Flags = CspProviderFlags.UseMachineKeyStore; // Windows only
+            return Ok(_rsaProvider.ToXmlString(false));
 
-            using (RSA rsaProvider = new RSACryptoServiceProvider(cspParams))
+        }
+
+        [HttpGet("sign")]
+        public IActionResult Sign([FromQuery] string? message)
+        {
+            if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
             {
-                // Generate a new RSA key pair
-                string publicKey = rsaProvider.ToXmlString(false);
-
-                return Ok(publicKey);
-
-                // Export the private key
-                //string privateKey = rsa.ToXmlString(true);
-                //Console.WriteLine("Private Key: " + privateKey);
+                return Unauthorized();
             }
 
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                return BadRequest("Bad Request");
+            }
+
+            // ASCIIEncoding ByteConverter = new ASCIIEncoding();
+            byte[] originalMessageBytes = Encoding.ASCII.GetBytes(message);
+            byte[] signedDataBytes = _rsaProvider.SignData(originalMessageBytes, SHA1.Create());
+
+            //for (int i = 0; i < signedDataBytes.Length; i++)
+            //{
+            //    Console.Write(signedDataBytes[i]);
+            //}
+            //Console.WriteLine();
+
+            string hexWithDashes = BitConverter.ToString(signedDataBytes);
+
+            // Console.WriteLine(Convert.ToBase64String(signedDataBytes));
+
+            return Ok(hexWithDashes);
         }
     }
 }
