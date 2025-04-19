@@ -13,7 +13,6 @@ namespace DistSysAcwServer.Controllers
     public class ProtectedController : ControllerBase
     {
         private readonly UserDatabaseAccess _userDataAccess;
-        // private CspParameters cspParams;
         private static RSACryptoServiceProvider _rsaProvider;
         // Fixed the declaration of the ContainerName field to resolve all the specified errors.
         private readonly string ContainerName = "ProtectedKeyContainer";
@@ -27,12 +26,6 @@ namespace DistSysAcwServer.Controllers
                 KeyContainerName = ContainerName,
                 Flags = CspProviderFlags.UseMachineKeyStore
             };
-
-            //cspParams = new CspParameters(); // CryptoServiceProvider Parameters
-            //cspParams.Flags = CspProviderFlags.UseMachineKeyStore; // Windows only
-
-            // _rsaProvider = new RSACryptoServiceProvider();
-
             _rsaProvider = new RSACryptoServiceProvider(cspParameters)
             {
                 PersistKeyInCsp = true
@@ -134,19 +127,9 @@ namespace DistSysAcwServer.Controllers
                 return BadRequest("Bad Request");
             }
 
-            // ASCIIEncoding ByteConverter = new ASCIIEncoding();
             byte[] originalMessageBytes = Encoding.ASCII.GetBytes(message);
             byte[] signedDataBytes = _rsaProvider.SignData(originalMessageBytes, SHA1.Create());
-
-            //for (int i = 0; i < signedDataBytes.Length; i++)
-            //{
-            //    Console.Write(signedDataBytes[i]);
-            //}
-            //Console.WriteLine();
-
             string hexWithDashes = BitConverter.ToString(signedDataBytes);
-
-            // Console.WriteLine(Convert.ToBase64String(signedDataBytes));
 
             return Ok(hexWithDashes);
         }

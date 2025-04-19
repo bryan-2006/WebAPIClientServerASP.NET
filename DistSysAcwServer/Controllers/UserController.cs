@@ -81,25 +81,29 @@ namespace DistSysAcwServer.Controllers
             return Ok(deleted);
         }
 
-        [Authorize(Roles = "Admin")] 
+        // curl -X POST "http://localhost:53415/api/user/changerole" -H "Content-Type: application/json" -H "ApiKey: c9f7ed4f-20b4-492a-9f8a-3f3c4e6fcd05" -d "{\"username\":\"UserThree\", \"role\":\"User\"}"
+        [Authorize(Roles = "Admin")]
         [HttpPost("changerole")]
-        public async Task<IActionResult> ChangeRole([FromBody] ChangeRoleRequest request, [FromHeader(Name = "ApiKey")] string apiKey)
+        public async Task<IActionResult> ChangeRole([FromBody] Dictionary<string, string> body, [FromHeader(Name = "ApiKey")] string apiKey)
         {
             try
             {
 
-                if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Role))
+                if (body == null || !body.TryGetValue("username", out var username) 
+                    || !body.TryGetValue("role", out var role)
+                    || string.IsNullOrWhiteSpace(username) 
+                    || string.IsNullOrWhiteSpace(role))
                 {
                     return BadRequest("NOT DONE: An error occurred");
                 }
 
-                var user = await _userDataAccess.GetUserByName(request.Username);
+                var user = await _userDataAccess.GetUserByName(username);
                 if (user == null)
                 {
                     return BadRequest("NOT DONE: Username does not exist");
                 }
 
-                if (request.Role != "Admin" && request.Role != "User")
+                if (role != "Admin" && role != "User")
                 {
                     return BadRequest("NOT DONE: Role does not exist");
                 }
@@ -110,7 +114,7 @@ namespace DistSysAcwServer.Controllers
                     return BadRequest("NOT DONE: An error occurred");
                 }
 
-                bool updated = await _userDataAccess.UpdateUserRole(request.Username, request.Role);
+                bool updated = await _userDataAccess.UpdateUserRole(username, role);
                 if (!updated)
                 {
                     return BadRequest("NOT DONE: An error occurred");
