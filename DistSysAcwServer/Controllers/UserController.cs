@@ -59,13 +59,14 @@ namespace DistSysAcwServer.Controllers
         // curl -X DELETE "http://localhost:53415/api/user/removeuser?username=<username>" -H "ApiKey: <key>"
         [Authorize(Roles = "Admin, User")]
         [HttpDelete("removeuser")]
-        public async Task<IActionResult> RemoveUser([FromQuery] string username)
+        public async Task<IActionResult> RemoveUser([FromQuery] string username, [FromHeader(Name = "ApiKey")] string apiKey)
         {
-            if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            {
-                return Ok(false);
-            }
-
+            //await _userDataAccess.LogActivity(apiKey, "/User/RemoveUser");
+            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
+            //{
+            //    await _userDataAccess.LogActivity(apiKey, "/User/RemoveUser");
+            //    return Ok(false);
+            //}
             var user = await _userDataAccess.GetUserWithAPI(apiKey);
             if (user == null)
             {
@@ -86,8 +87,9 @@ namespace DistSysAcwServer.Controllers
         [HttpPost("changerole")]
         public async Task<IActionResult> ChangeRole([FromBody] Dictionary<string, string> body, [FromHeader(Name = "ApiKey")] string apiKey)
         {
+            await _userDataAccess.LogActivity(apiKey, "/User/ChangeRole");
             try
-            {
+            { 
 
                 if (body == null || !body.TryGetValue("username", out var username) 
                     || !body.TryGetValue("role", out var role)

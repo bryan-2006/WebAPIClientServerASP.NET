@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Net;
+using System.Globalization;
 
 
 #region Task 10 and beyond
@@ -33,7 +36,8 @@ class Client
 
             if (!firstCommand) { Console.Clear(); }
 
-            string[] inputCommandAndArg = Regex.Replace(input.Trim(), @"\s+", " ").Split(' ');
+            string[] inputCommandAndArg = input.Split(new[] { ' ' }, 4);
+            // string[] inputCommandAndArg = Regex.Replace(input.Trim(), @"\s+", " ").Split(new[] { ' ' }, 4); //.Split(' '); 
             string controller = inputCommandAndArg[0];
             string action = inputCommandAndArg.Length > 1 ? inputCommandAndArg[1] : "";
             string arg = inputCommandAndArg.Length > 2 ? inputCommandAndArg[2] : "";
@@ -87,6 +91,12 @@ class Client
                     break;
 
                 case "Protected":
+
+                    if (action == "SHA1" ||  action == "SHA256" || action == "Sign" || action == "Mashify")
+                    {
+                        if (arg2 != "") arg += " " + arg2;  // || arg.EndsWith(" ")
+                    }
+
                     switch (action)
                     {
                         case "Hello":
@@ -110,17 +120,22 @@ class Client
                         case "Sign":
                             await ProtectedSign(arg);
                             break;
+                        case "Mashify":
+                            await Mashify(arg);
+                            break;
                         default:
                             Console.WriteLine(
                                 "Invalid action API endpoint for Protected controller. " +
                                 "Can only be \"Hello\", \"SHA1\", \"SHA256\", " +
-                                "\"Get PublicKey\" or \"Sign <message>\" (case sensitive).");
+                                "\"Get PublicKey\", \"Sign <message>\", or \"Mashify <message>\" (case sensitive).");
                             break;
                     }
                     break;
 
                 default:
-                    Console.WriteLine("Invalid controller API endpoint. Can only go through \"Talkback\", \"User\", or \"Protected\". \"Exit\" to exit client (case sensitive).");
+                    Console.WriteLine("Invalid controller API endpoint. " +
+                        "Can only go through \"Talkback\", \"User\", or \"Protected\". " +
+                        "\"Exit\" to exit client (case sensitive).");
                     break;
             }
 
@@ -131,10 +146,84 @@ class Client
         }
     }
 
-    // Inside the Client class, replace the method ProtectedSign with the following:
+    private static async Task Mashify(string arg)
+    {
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
+
+        if (apiKey == "")
+        {
+            Console.WriteLine("You need to do a User Post or User Set first");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(publicKey))
+        {
+            Console.WriteLine("Client doesn't yet have the public key");
+            return;
+        }
+
+        using var aes = Aes.Create();
+        aes.GenerateKey();
+        aes.GenerateIV();
+
+        string encryptedMsg = BitConverter.ToString(_clientRsaProvider.Encrypt(
+            Encoding.ASCII.GetBytes(arg), RSAEncryptionPadding.OaepSHA1));
+        string encryptedKey = BitConverter.ToString(_clientRsaProvider.Encrypt(
+            aes.Key, RSAEncryptionPadding.OaepSHA1)); ;
+        string encryptedIV = BitConverter.ToString(_clientRsaProvider.Encrypt(
+            aes.IV, RSAEncryptionPadding.OaepSHA1)); ;
+
+        Console.WriteLine(encryptedMsg + "\n" + encryptedKey + "\n" + encryptedIV);
+
+        var requestMessage = new HttpRequestMessage
+        {
+            Method = HttpMethod.Get,
+            RequestUri = new Uri($"{baseUrl}/Protected/Mashify"),
+            Content = new StringContent
+            ($"{{\"message\":\"{encryptedMsg}\"," +
+            $"\"symmetricKey\":\"{encryptedKey}\", " +
+            $"\"initVector\":\"{encryptedIV}\"}}",
+            Encoding.ASCII, "application/json")
+        };
+
+        requestMessage.Headers.Add("ApiKey", apiKey);
+        var response = await client.SendAsync(requestMessage);
+        string hexWithDashes = await response.Content.ReadAsStringAsync();
+        string hexNoDashes = hexWithDashes.Replace("-", "");
+        byte[] signedBytes = Convert.FromHexString(hexNoDashes);
+        //Console.WriteLine($"{hexWithDashes}");
+        //string reversedMessage = hexNoDashes;
+
+        // Convert server response hex to byte[]
+        byte[] encryptedMashifiedBytes = hexWithDashes
+            .Split('-')
+            .Where(hex => !string.IsNullOrWhiteSpace(hex))
+            .Select(hex => Convert.ToByte(hex, 16)).ToArray();
+
+        // Decrypt the mashified bytes using original AES key and IV
+        string mashifiedText;
+        using (var decryptor = aes.CreateDecryptor())
+        {
+            byte[] decrypted = decryptor.TransformFinalBlock(encryptedMashifiedBytes, 0, encryptedMashifiedBytes.Length);
+            mashifiedText = Encoding.ASCII.GetString(decrypted);
+        }
+
+        // Reverse the decrypted mashified text
+        string msgWithVowelsReplaced = new string(mashifiedText.Reverse().ToArray())
+            .Replace("a", "X").Replace("A", "X").Replace("e", "X").Replace("E", "X")
+            .Replace("i", "X").Replace("I", "X").Replace("o", "X").Replace("O", "X")
+            .Replace("u", "X").Replace("U", "X");
+
+        char[] charArray = msgWithVowelsReplaced.ToCharArray();
+        Array.Reverse(charArray);
+        string reversedXMsg = new string(charArray);
+
+        Console.WriteLine(reversedXMsg);
+    }
 
     private static async Task ProtectedSign(string arg)
     {
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
         try
         {
             if (apiKey == "")
@@ -172,23 +261,23 @@ class Client
             }
             else
             {
-                Console.WriteLine("Message was not successfully signed VERIFIED == FALSE");
+                Console.WriteLine("Message was not successfully signed");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Message was not successfully signed" + ex.Message);
+            Console.WriteLine("Message was not successfully signed");
         }
     }
 
     private static async Task ProtectedPublicKeyRetrieve()
     {
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
         if (apiKey == "")
         {
             Console.WriteLine("You need to do a User Post or User Set first");
             return;
         }
-        Console.WriteLine("...please wait..."); Console.WriteLine("");
         var requestMessage = new HttpRequestMessage
         {
             Method = HttpMethod.Get,
@@ -214,6 +303,7 @@ class Client
 
     private static async Task ProtectedEndpointTemplate(string endpoint)
     {
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
         if (apiKey == "")
         {
             Console.WriteLine("You need to do a User Post or User Set first");
@@ -250,12 +340,12 @@ class Client
 
     private static async Task UserRole(string username, string role)
     {
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
         if (apiKey == "")
         {
             Console.WriteLine("You need to do a User Post or User Set first");
             return;
         }
-        Console.WriteLine("...please wait..."); Console.WriteLine("");
         var requestMessage = new HttpRequestMessage
         {
             Method = HttpMethod.Post,
@@ -274,12 +364,12 @@ class Client
 
     private static async Task UserDelete()
     {
-        if(username == "" || apiKey == "")
+        Console.WriteLine("...please wait..."); Console.WriteLine("");
+        if (username == "" || apiKey == "")
         {
             Console.WriteLine("You need to do a User Post or User Set first");
             return;
         }
-        Console.WriteLine("...please wait..."); Console.WriteLine("");
         var deleteRequest = new HttpRequestMessage(
             HttpMethod.Delete, $"{baseUrl}/User/removeuser?username={username}");
         deleteRequest.Headers.Add("ApiKey", apiKey);
@@ -290,6 +380,7 @@ class Client
 
         if (responseContent == "true")
         {
+            apiKey = ""; username = "";
             Console.WriteLine("True");
         }
         else

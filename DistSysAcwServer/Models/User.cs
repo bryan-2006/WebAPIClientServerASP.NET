@@ -1,8 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace DistSysAcwServer.Models
 {
@@ -20,6 +16,8 @@ namespace DistSysAcwServer.Models
 
         [Required]
         public required string UserName { get; set; }
+
+        public virtual ICollection<Log> Logs { get; set; } = new List<Log>();
 
         [Required]
         public required string Role { get; set; }

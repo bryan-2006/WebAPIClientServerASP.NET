@@ -4,6 +4,7 @@ using DistSysAcwServer.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DistSysAcwServer.Migrations
 {
     [DbContext(typeof(UserContext))]
-    partial class UserContextModelSnapshot : ModelSnapshot
+    [Migration("20250420112231_AddUserApiKeyToArchivedLog")]
+    partial class AddUserApiKeyToArchivedLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -62,7 +65,6 @@ namespace DistSysAcwServer.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserApiKey")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("LogID");
@@ -92,13 +94,9 @@ namespace DistSysAcwServer.Migrations
 
             modelBuilder.Entity("DistSysAcwServer.Models.Log", b =>
                 {
-                    b.HasOne("DistSysAcwServer.Models.User", "User")
+                    b.HasOne("DistSysAcwServer.Models.User", null)
                         .WithMany("Logs")
-                        .HasForeignKey("UserApiKey")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
+                        .HasForeignKey("UserApiKey");
                 });
 
             modelBuilder.Entity("DistSysAcwServer.Models.User", b =>

@@ -1,6 +1,6 @@
-﻿using DistSysAcwServer.Models;
+﻿using System.Data;
+using DistSysAcwServer.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
 
 namespace DistSysAcwServer.Controllers
 {
@@ -54,9 +54,9 @@ namespace DistSysAcwServer.Controllers
 
             if (user == null) return false;
 
-            _userContext.Users.Remove(user);
-            await _userContext.SaveChangesAsync();
+            await _userContext.Entry(user).Collection(u => u.Logs).LoadAsync();
 
+            await ArchiveLogActivity(user);
             return true;
         }
 
@@ -89,6 +89,27 @@ namespace DistSysAcwServer.Controllers
             return true;
         }
 
+        public async Task LogActivity(string api, string activityDescription)
+        {
+            if (string.IsNullOrEmpty(api)) return;
+            var user = await GetUserWithAPI(api);
+            if (user == null) return;
 
+            user.Logs.Add(new Log(activityDescription));
+            await _userContext.SaveChangesAsync();
+        }
+
+        public async Task ArchiveLogActivity(User user)
+        {
+            foreach(Log log in user.Logs)
+            {
+                await _userContext.ArchivedLogs.AddAsync(new ArchivedLog(log.LogString, log.LogDateTime, user.ApiKey));
+                _userContext.Logs.Remove(log);
+            }
+
+            _userContext.Users.Remove(user);
+
+            await _userContext.SaveChangesAsync();
+        }
     }
 }

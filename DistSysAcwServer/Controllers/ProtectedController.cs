@@ -33,29 +33,31 @@ namespace DistSysAcwServer.Controllers
         }
 
         [HttpGet("hello")]
-        public async Task<IActionResult> Hello()
+        public async Task<IActionResult> Hello([FromHeader(Name = "ApiKey")] string apiKey)
         {
-            if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            {
-                return Ok(false);
-            }
-
+            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
+            //{
+            //    return Ok(false);
+            //}
+            await _userDataAccess.LogActivity(apiKey, "/Protected/Hello");
             var user = await _userDataAccess.GetUserWithAPI(apiKey);
-            if (user == null)
-            {
-                return Ok(false);
-            }
+            //if (user == null)
+            //{
+            //    return Ok(false);
+            //}
 
             return Ok("Hello " + user.UserName);
         }
 
         [HttpGet("sha1")]
-        public IActionResult Sha1([FromQuery] string? message)
+        public async Task<IActionResult> Sha1([FromQuery] string? message, [FromHeader(Name = "ApiKey")] string apiKey)
         {
-            if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            {
-                return Ok(false);
-            }
+            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
+            //{
+            //    return Ok(false);
+            //}
+
+            await _userDataAccess.LogActivity(apiKey, "/Protected/SHA1");
 
             if (string.IsNullOrWhiteSpace(message))
             {
@@ -76,12 +78,14 @@ namespace DistSysAcwServer.Controllers
         }
 
         [HttpGet("sha256")]
-        public IActionResult Sha256([FromQuery] string? message)
+        public async Task<IActionResult> Sha256([FromQuery] string? message, [FromHeader(Name = "ApiKey")] string apiKey)
         {
-            if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            {
-                return Ok(false);
-            }
+            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
+            //{
+            //    return Ok(false);
+            //}
+
+            await _userDataAccess.LogActivity(apiKey, "/Protected/SHA256");
 
             if (string.IsNullOrWhiteSpace(message))
             {
@@ -103,24 +107,25 @@ namespace DistSysAcwServer.Controllers
 
 
         [HttpGet("getpublickey")]
-        public IActionResult GetPublicKey()
+        public async Task<IActionResult> GetPublicKey([FromHeader(Name = "ApiKey")] string apiKey)
         {
-            if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            {
-                return Unauthorized();
-            }
-
+            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
+            //{
+            //    return Unauthorized();
+            //}
+            await _userDataAccess.LogActivity(apiKey, "/Protected/GetPublicKey");
             return Ok(_rsaProvider.ToXmlString(false));
 
         }
 
         [HttpGet("sign")]
-        public IActionResult Sign([FromQuery] string? message)
+        public async Task<IActionResult> Sign([FromQuery] string? message, [FromHeader(Name = "ApiKey")] string apiKey)
         {
-            if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            {
-                return Unauthorized();
-            }
+            await _userDataAccess.LogActivity(apiKey, "/Protected/Sign");
+            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
+            //{
+            //    return Unauthorized();
+            //}
 
             if (string.IsNullOrWhiteSpace(message))
             {
@@ -132,6 +137,53 @@ namespace DistSysAcwServer.Controllers
             string hexWithDashes = BitConverter.ToString(signedDataBytes);
 
             return Ok(hexWithDashes);
+        }
+
+
+        [HttpGet("mashify")]
+        public async Task<IActionResult> Mashify([FromHeader(Name = "ApiKey")] string apiKey)
+        {
+            await _userDataAccess.LogActivity(apiKey, "/Protected/Mashify");
+            Console.WriteLine("hi");
+            using var reader = new StreamReader(Request.Body);
+            var rawBody = await reader.ReadToEndAsync();
+            Console.WriteLine(rawBody);
+            Dictionary<string, string> body = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(rawBody);
+
+            if (body == null ||
+                !body.TryGetValue("message", out var message) || string.IsNullOrWhiteSpace(message) ||
+                !body.TryGetValue("symmetricKey", out var symmetricKey) || string.IsNullOrWhiteSpace(symmetricKey) ||
+                !body.TryGetValue("initVector", out var initVector) || string.IsNullOrWhiteSpace(initVector))
+            {
+                return BadRequest("Bad Request");
+            }
+
+            byte[] encryptedMsgBytes = Convert.FromHexString(message.Replace("-", ""));
+            byte[] encryptedKeyBytes = Convert.FromHexString(symmetricKey.Replace("-", ""));
+            byte[] encryptedInitVector = Convert.FromHexString(initVector.Replace("-", ""));
+
+            byte[] msgBytes = _rsaProvider.Decrypt(encryptedMsgBytes, RSAEncryptionPadding.OaepSHA1);
+            byte[] aesKeyBytes = _rsaProvider.Decrypt(encryptedKeyBytes, RSAEncryptionPadding.OaepSHA1);
+            byte[] iVectorBytes = _rsaProvider.Decrypt(encryptedInitVector, RSAEncryptionPadding.OaepSHA1);
+
+            string msg = Encoding.ASCII.GetString(msgBytes);
+            string mashified = new string(msg.Reverse().ToArray());
+
+            byte[] encryptedMashifiedBytes;
+
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = aesKeyBytes;
+                aes.IV = iVectorBytes;
+                aes.Padding = PaddingMode.PKCS7;
+
+                using var encryptor = aes.CreateEncryptor();
+                byte[] mashifiedBytes = Encoding.ASCII.GetBytes(mashified);
+                encryptedMashifiedBytes = encryptor.TransformFinalBlock(mashifiedBytes, 0, mashifiedBytes.Length);
+            }
+
+            string responseHex = BitConverter.ToString(encryptedMashifiedBytes);
+            return Ok(responseHex);
         }
     }
 }
