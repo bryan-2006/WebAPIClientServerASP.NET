@@ -32,9 +32,8 @@ namespace DistSysAcwServer.Controllers
         }
 
         // since IIS Express use localhost:53415 for curl commands
-
-        [HttpPost("new")]
         // curl -X POST "http://localhost:53415/api/user/new" -H "Content-Type: application/json" -d "\"<User#>\""
+        [HttpPost("new")]
         public async Task<IActionResult> RegisterUser([FromBody] string username)
         {
             if (string.IsNullOrWhiteSpace(username))
@@ -61,12 +60,6 @@ namespace DistSysAcwServer.Controllers
         [HttpDelete("removeuser")]
         public async Task<IActionResult> RemoveUser([FromQuery] string username, [FromHeader(Name = "ApiKey")] string apiKey)
         {
-            //await _userDataAccess.LogActivity(apiKey, "/User/RemoveUser");
-            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            //{
-            //    await _userDataAccess.LogActivity(apiKey, "/User/RemoveUser");
-            //    return Ok(false);
-            //}
             var user = await _userDataAccess.GetUserWithAPI(apiKey);
             if (user == null)
             {

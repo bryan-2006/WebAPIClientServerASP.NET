@@ -5,8 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Net;
-using System.Globalization;
 
 
 #region Task 10 and beyond
@@ -192,7 +190,6 @@ class Client
         string hexNoDashes = hexWithDashes.Replace("-", "");
         byte[] signedBytes = Convert.FromHexString(hexNoDashes);
         //Console.WriteLine($"{hexWithDashes}");
-        //string reversedMessage = hexNoDashes;
 
         // Convert server response hex to byte[]
         byte[] encryptedMashifiedBytes = hexWithDashes
@@ -399,8 +396,6 @@ class Client
 
     private static async Task UserPost(string arg)
     {
-        //JsonContent content = JsonContent.Create(
-        //    new { username = $"{arg}"});
         Console.WriteLine("...please wait..."); Console.WriteLine("");
 
         var jsonPayload = new StringContent($"\"{arg}\"", Encoding.UTF8, "application/json");
@@ -436,7 +431,6 @@ class Client
             string[] elements = Regex.Split(arg.Trim('[', ']'), @",\s*");
             var firstElement = elements.Length > 0 ? elements[0] : "";
             string integersFromQuery = $"integers={firstElement}";
-            //inputCommandAndArg.Length > 1 ? inputCommandAndArg[1]: ""
 
             for (int i = 1; i < elements.Length; i++)
             {
@@ -470,22 +464,6 @@ class Client
             Console.WriteLine(errorContent);
         }
     }
-
-    //private static async Task WriteStringAsyncWithJson(string route, HttpContent requestData)
-    //{
-        
-
-    //    try
-    //    {
-    //        var response = await client.PostAsync($"{baseUrl}{route}", requestData);
-    //        Console.WriteLine(await response.Content.ReadAsStringAsync());
-    //    }
-    //    catch(Exception e)
-    //    {
-    //        Console.WriteLine(e.Message);
-    //    }
-
-    //}
 }
 
 #endregion

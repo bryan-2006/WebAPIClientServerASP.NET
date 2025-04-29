@@ -40,16 +40,16 @@ namespace DistSysAcwServer.Controllers
         {
             if (integers == null || integers.Length == 0)
             {
-                return Ok(new int[] { }); // empty array 
+                return Ok(new int[] { }); 
             }
 
             List<int> parsedIntegers = new List<int>();
 
             foreach (var value in integers)
             {
-                if (!int.TryParse(value, out int number)) // valid integer
+                if (!int.TryParse(value, out int number)) // if not valid integer
                 {
-                    return BadRequest("Bad Request"); // "Bad request"
+                    return BadRequest("Bad Request");
                 }
                 parsedIntegers.Add(number);
             }

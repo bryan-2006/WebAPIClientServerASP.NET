@@ -35,16 +35,8 @@ namespace DistSysAcwServer.Controllers
         [HttpGet("hello")]
         public async Task<IActionResult> Hello([FromHeader(Name = "ApiKey")] string apiKey)
         {
-            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            //{
-            //    return Ok(false);
-            //}
             await _userDataAccess.LogActivity(apiKey, "/Protected/Hello");
             var user = await _userDataAccess.GetUserWithAPI(apiKey);
-            //if (user == null)
-            //{
-            //    return Ok(false);
-            //}
 
             return Ok("Hello " + user.UserName);
         }
@@ -52,11 +44,6 @@ namespace DistSysAcwServer.Controllers
         [HttpGet("sha1")]
         public async Task<IActionResult> Sha1([FromQuery] string? message, [FromHeader(Name = "ApiKey")] string apiKey)
         {
-            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            //{
-            //    return Ok(false);
-            //}
-
             await _userDataAccess.LogActivity(apiKey, "/Protected/SHA1");
 
             if (string.IsNullOrWhiteSpace(message))
@@ -80,11 +67,6 @@ namespace DistSysAcwServer.Controllers
         [HttpGet("sha256")]
         public async Task<IActionResult> Sha256([FromQuery] string? message, [FromHeader(Name = "ApiKey")] string apiKey)
         {
-            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            //{
-            //    return Ok(false);
-            //}
-
             await _userDataAccess.LogActivity(apiKey, "/Protected/SHA256");
 
             if (string.IsNullOrWhiteSpace(message))
@@ -109,24 +91,15 @@ namespace DistSysAcwServer.Controllers
         [HttpGet("getpublickey")]
         public async Task<IActionResult> GetPublicKey([FromHeader(Name = "ApiKey")] string apiKey)
         {
-            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            //{
-            //    return Unauthorized();
-            //}
             await _userDataAccess.LogActivity(apiKey, "/Protected/GetPublicKey");
             return Ok(_rsaProvider.ToXmlString(false));
-
         }
 
         [HttpGet("sign")]
         public async Task<IActionResult> Sign([FromQuery] string? message, [FromHeader(Name = "ApiKey")] string apiKey)
         {
             await _userDataAccess.LogActivity(apiKey, "/Protected/Sign");
-            //if (!Request.Headers.TryGetValue("ApiKey", out var apiKey) || string.IsNullOrWhiteSpace(apiKey))
-            //{
-            //    return Unauthorized();
-            //}
-
+            
             if (string.IsNullOrWhiteSpace(message))
             {
                 return BadRequest("Bad Request");
@@ -144,10 +117,10 @@ namespace DistSysAcwServer.Controllers
         public async Task<IActionResult> Mashify([FromHeader(Name = "ApiKey")] string apiKey)
         {
             await _userDataAccess.LogActivity(apiKey, "/Protected/Mashify");
-            Console.WriteLine("hi");
+            
             using var reader = new StreamReader(Request.Body);
             var rawBody = await reader.ReadToEndAsync();
-            Console.WriteLine(rawBody);
+            
             Dictionary<string, string> body = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(rawBody);
 
             if (body == null ||
