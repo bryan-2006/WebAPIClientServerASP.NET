@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -171,51 +172,82 @@ class Client
         string encryptedIV = BitConverter.ToString(_clientRsaProvider.Encrypt(
             aes.IV, RSAEncryptionPadding.OaepSHA1)); ;
 
-        Console.WriteLine(encryptedMsg + "\n" + encryptedKey + "\n" + encryptedIV);
+        // Console.WriteLine(encryptedMsg + "\n" + encryptedKey + "\n" + encryptedIV);
 
+        // Create the JSON payload and serialize instead of doing manually with StringContent
+        var payload = new
+        {
+            EncryptedString = encryptedMsg,
+            EncryptedSymKey = encryptedKey,
+            EncryptedIV = encryptedIV
+        };
+
+        string jsonString = JsonSerializer.Serialize(payload);
+
+        
         var requestMessage = new HttpRequestMessage
         {
             Method = HttpMethod.Get,
             RequestUri = new Uri($"{baseUrl}/Protected/Mashify"),
-            Content = new StringContent
-            ($"{{\"message\":\"{encryptedMsg}\"," +
-            $"\"symmetricKey\":\"{encryptedKey}\", " +
-            $"\"initVector\":\"{encryptedIV}\"}}",
-            Encoding.ASCII, "application/json")
+
+            //OLD METHOD
+
+            //Content = new StringContent
+            //($"{{\"EncryptedString\":\"{encryptedMsg}\"," +
+            //$"\"EncryptedSymKey\":\"{encryptedKey}\", " +
+            //$"\"EncryptedIV\":\"{encryptedIV}\"}}",
+            //Encoding.ASCII, "application/json")
+
+            Content = new StringContent(jsonString, Encoding.UTF8, "application/json")
+
         };
+
 
         requestMessage.Headers.Add("ApiKey", apiKey);
         var response = await client.SendAsync(requestMessage);
-        string hexWithDashes = await response.Content.ReadAsStringAsync();
-        string hexNoDashes = hexWithDashes.Replace("-", "");
-        byte[] signedBytes = Convert.FromHexString(hexNoDashes);
-        //Console.WriteLine($"{hexWithDashes}");
 
-        // Convert server response hex to byte[]
-        byte[] encryptedMashifiedBytes = hexWithDashes
-            .Split('-')
-            .Where(hex => !string.IsNullOrWhiteSpace(hex))
-            .Select(hex => Convert.ToByte(hex, 16)).ToArray();
-
-        // Decrypt the mashified bytes using original AES key and IV
-        string mashifiedText;
-        using (var decryptor = aes.CreateDecryptor())
+        if (response.IsSuccessStatusCode)
         {
-            byte[] decrypted = decryptor.TransformFinalBlock(encryptedMashifiedBytes, 0, encryptedMashifiedBytes.Length);
-            mashifiedText = Encoding.ASCII.GetString(decrypted);
+
+            //Console.WriteLine(response);
+            string hexWithDashes = await response.Content.ReadAsStringAsync();
+            // Console.WriteLine($"{hexWithDashes}");
+            string hexNoDashes = hexWithDashes.Replace("-", "");
+            byte[] signedBytes = Convert.FromHexString(hexNoDashes);
+            //Console.WriteLine($"{hexWithDashes}");
+
+            // Convert server response hex to byte[]
+            byte[] encryptedMashifiedBytes = hexWithDashes
+                .Split('-')
+                .Where(hex => !string.IsNullOrWhiteSpace(hex))
+                .Select(hex => Convert.ToByte(hex, 16)).ToArray();
+
+            // Decrypt the mashified bytes using original AES key and IV
+            string mashifiedText;
+            using (var decryptor = aes.CreateDecryptor())
+            {
+                byte[] decrypted = decryptor.TransformFinalBlock(encryptedMashifiedBytes, 0, encryptedMashifiedBytes.Length);
+                mashifiedText = Encoding.ASCII.GetString(decrypted);
+            }
+
+            // Reverse the decrypted mashified text
+            string msgWithVowelsReplaced = new string(mashifiedText.Reverse().ToArray())
+                .Replace("a", "X").Replace("A", "X").Replace("e", "X").Replace("E", "X")
+                .Replace("i", "X").Replace("I", "X").Replace("o", "X").Replace("O", "X")
+                .Replace("u", "X").Replace("U", "X");
+
+            char[] charArray = msgWithVowelsReplaced.ToCharArray();
+            Array.Reverse(charArray);
+            string reversedXMsg = new string(charArray);
+
+            Console.WriteLine(reversedXMsg);
+        }
+        else
+        {
+            string msg = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(msg);
         }
 
-        // Reverse the decrypted mashified text
-        string msgWithVowelsReplaced = new string(mashifiedText.Reverse().ToArray())
-            .Replace("a", "X").Replace("A", "X").Replace("e", "X").Replace("E", "X")
-            .Replace("i", "X").Replace("I", "X").Replace("o", "X").Replace("O", "X")
-            .Replace("u", "X").Replace("U", "X");
-
-        char[] charArray = msgWithVowelsReplaced.ToCharArray();
-        Array.Reverse(charArray);
-        string reversedXMsg = new string(charArray);
-
-        Console.WriteLine(reversedXMsg);
     }
 
     private static async Task ProtectedSign(string arg)
@@ -234,7 +266,7 @@ class Client
                 Console.WriteLine("Client doesn't yet have the public key");
                 return;
             }
-            Console.WriteLine("...please wait..."); Console.WriteLine("");
+
             var requestMessage = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
@@ -306,7 +338,6 @@ class Client
             Console.WriteLine("You need to do a User Post or User Set first");
             return;
         }
-        Console.WriteLine("...please wait..."); Console.WriteLine("");
         var requestMessage = new HttpRequestMessage
         {
             Method = HttpMethod.Get,

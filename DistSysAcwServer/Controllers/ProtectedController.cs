@@ -14,12 +14,48 @@ namespace DistSysAcwServer.Controllers
     {
         private readonly UserDatabaseAccess _userDataAccess;
         private static RSACryptoServiceProvider _rsaProvider;
-        // Fixed the declaration of the ContainerName field to resolve all the specified errors.
         private readonly string ContainerName = "ProtectedKeyContainer";
 
         public ProtectedController(UserDatabaseAccess userDataAccess)
         {
             _userDataAccess = userDataAccess;
+
+            /*
+             * While working on Sign I realized the server was not properly signing the message for client. 
+             * 
+             * After further inspection on the client and server I realized this is due to fact that the 
+             * private and public key pair was getting regenerated on the server for each new request. 
+             * 
+             * After discussing with peers I still could not pinpoint why exactly it did not work for me since 
+             * it seemed to work fine for them. I dug out the code I assumed was faulty and tried using ChatGPT
+             * to debug but it kept hallucinating and thinking it did work and/or saying all I have to do is add more
+             * Console.WriteLines to debug which was not helpful at all since I already knew that it was not in fact working
+             * and why exactly it was not working. I needed a proper way to have the public private key pair to persist
+             * while using different methods in this controller. 
+             * 
+             * This is when I tried to then consult Stack Overflow. I have never needed to make my very own post before and
+             * was pretty excited to but Stack Overflow was not letting me create a new account for some reason.
+             * 
+             * I then joined the C# Discord server and made a thread on the help channel with a description of my problem
+             * and the code I assumed was faulty as mentioned previously. I had used the code clip provided in the lectures
+             * when using CspParameters and I realized this would not work for me. My old code on here was as such:
+             * 
+             * 
+             
+             cspParams = new CspParameters();
+             cspParams.Flags = CspProviderFlags.UseMachineKeyStore;
+             _rsaProvider = new RSACryptoServiceProvider(cspParams);
+
+             * I was told that I instead have to set a constant string to CspParameters.KeyContainerName and 
+             * RSACryptoServiceProvider.PersistKeyInCsp to true (GoldenFapple, 2025) to achieve what I need. 
+             * Hence my code has been updated
+             * 
+             * 
+             * 
+             * GoldenFapple (2025) Verify Signed Message with Server's Public Key?. C# [Discord]. 19 April. 
+             * https://discord.com/channels/143867839282020352/1362850494044705004/1363049423927640164 [19 April 2025].
+             */
+
 
             CspParameters cspParameters = new CspParameters
             {
@@ -113,20 +149,21 @@ namespace DistSysAcwServer.Controllers
         }
 
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("mashify")]
-        public async Task<IActionResult> Mashify([FromHeader(Name = "ApiKey")] string apiKey)
+        public async Task<IActionResult> Mashify([FromHeader(Name = "ApiKey")] string apiKey, [FromBody] Dictionary<string, string> body)
         {
             await _userDataAccess.LogActivity(apiKey, "/Protected/Mashify");
-            
+            Console.WriteLine(body);
             using var reader = new StreamReader(Request.Body);
             var rawBody = await reader.ReadToEndAsync();
             
-            Dictionary<string, string> body = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(rawBody);
+            // Dictionary<string, string> body = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(rawBody);
 
             if (body == null ||
-                !body.TryGetValue("message", out var message) || string.IsNullOrWhiteSpace(message) ||
-                !body.TryGetValue("symmetricKey", out var symmetricKey) || string.IsNullOrWhiteSpace(symmetricKey) ||
-                !body.TryGetValue("initVector", out var initVector) || string.IsNullOrWhiteSpace(initVector))
+                !body.TryGetValue("EncryptedString", out var message) || string.IsNullOrWhiteSpace(message) ||
+                !body.TryGetValue("EncryptedSymKey", out var symmetricKey) || string.IsNullOrWhiteSpace(symmetricKey) ||
+                !body.TryGetValue("EncryptedIV", out var initVector) || string.IsNullOrWhiteSpace(initVector))
             {
                 return BadRequest("Bad Request");
             }
