@@ -53,7 +53,7 @@ namespace DistSysAcwServer.Controllers
              * 
              * 
              * GoldenFapple (2025) Verify Signed Message with Server's Public Key?. C# [Discord]. 19 April. 
-             * https://discord.com/channels/143867839282020352/1362850494044705004/1363049423927640164 [19 April 2025].
+             * https://discord.com/channels/143867839282020352/1362850494044705004/1363049423927640164 [Accessed 19 April 2025].
              */
 
 
